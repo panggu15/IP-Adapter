@@ -7,7 +7,7 @@ import itertools
 import time
 import pandas as pd
 import requests
-import BytesIO
+from io import BytesIO
 
 import torch
 import torch.nn.functional as F
