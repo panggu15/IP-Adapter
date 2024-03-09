@@ -28,7 +28,7 @@ else:
 # Dataset
 class MyDataset(torch.utils.data.Dataset):
 
-    def __init__(self, json_file, tokenizer, size=512, t_drop_rate=0.05, i_drop_rate=0.05, ti_drop_rate=0.05, image_root_path=""):
+    def __init__(self, df, tokenizer, size=512, t_drop_rate=0.05, i_drop_rate=0.05, ti_drop_rate=0.05):
         super().__init__()
 
         self.tokenizer = tokenizer
@@ -36,9 +36,8 @@ class MyDataset(torch.utils.data.Dataset):
         self.i_drop_rate = i_drop_rate
         self.t_drop_rate = t_drop_rate
         self.ti_drop_rate = ti_drop_rate
-        self.image_root_path = image_root_path
 
-        self.data = json.load(open(json_file)) # list of dict: [{"image_file": "1.png", "text": "A dog"}]
+        self.data = df
 
         self.transform = transforms.Compose([
             transforms.Resize(self.size, interpolation=transforms.InterpolationMode.BILINEAR),
@@ -49,12 +48,14 @@ class MyDataset(torch.utils.data.Dataset):
         self.clip_image_processor = CLIPImageProcessor()
         
     def __getitem__(self, idx):
-        item = self.data[idx] 
+        item = self.data.iloc[idx] 
         text = item["text"]
-        image_file = item["image_file"]
+        image_file = item["ur;"]
         
         # read image
-        raw_image = Image.open(os.path.join(self.image_root_path, image_file))
+        response = requests.get(image_file)
+        image_bytes = BytesIO(response.content)
+        raw_image = Image.open(image_bytes)
         image = self.transform(raw_image.convert("RGB"))
         clip_image = self.clip_image_processor(images=raw_image, return_tensors="pt").pixel_values
         
@@ -164,13 +165,6 @@ def parse_args():
         default=None,
         required=True,
         help="Training data",
-    )
-    parser.add_argument(
-        "--data_root_path",
-        type=str,
-        default="",
-        required=True,
-        help="Training data root path",
     )
     parser.add_argument(
         "--image_encoder_path",
@@ -337,7 +331,7 @@ def main():
     optimizer = torch.optim.AdamW(params_to_opt, lr=args.learning_rate, weight_decay=args.weight_decay)
     
     # dataloader
-    train_dataset = MyDataset(args.data_json_file, tokenizer=tokenizer, size=args.resolution, image_root_path=args.data_root_path)
+    train_dataset = MyDataset(args.data_json_file, tokenizer=tokenizer, size=args.resolution)
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,
         shuffle=True,
