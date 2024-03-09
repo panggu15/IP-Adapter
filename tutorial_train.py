@@ -5,6 +5,7 @@ from pathlib import Path
 import json
 import itertools
 import time
+import pandas as pd
 
 import torch
 import torch.nn.functional as F
@@ -37,7 +38,7 @@ class MyDataset(torch.utils.data.Dataset):
         self.t_drop_rate = t_drop_rate
         self.ti_drop_rate = ti_drop_rate
 
-        self.data = df
+        self.data = pd.read_csv(df)
 
         self.transform = transforms.Compose([
             transforms.Resize(self.size, interpolation=transforms.InterpolationMode.BILINEAR),
