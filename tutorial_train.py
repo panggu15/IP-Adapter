@@ -51,7 +51,7 @@ class MyDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         item = self.data.iloc[idx] 
         text = item["text"]
-        image_file = item["ur;"]
+        image_file = item["url"]
         
         # read image
         response = requests.get(image_file)
