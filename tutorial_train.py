@@ -62,7 +62,7 @@ class MyDataset(torch.utils.data.Dataset):
         print(np.array(raw_image).shape)
         image = self.transform(raw_image.convert("RGB"))
         print(image.shape)
-        clip_image = self.clip_image_processor(images=image, return_tensors="pt").pixel_values
+        clip_image = self.clip_image_processor(images=raw_image, return_tensors="pt").pixel_values
         
         # drop
         drop_image_embed = 0
