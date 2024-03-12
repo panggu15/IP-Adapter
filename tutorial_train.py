@@ -60,9 +60,7 @@ class MyDataset(torch.utils.data.Dataset):
         response = requests.get(image_file)
         image_bytes = BytesIO(response.content)
         raw_image = Image.open(image_bytes)
-        print(np.array(raw_image).shape)
         image = self.transform(raw_image.convert("RGB"))
-        print(image.shape)
         clip_image = self.clip_image_processor(images=raw_image, return_tensors="pt").pixel_values
         
         # drop
