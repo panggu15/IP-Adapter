@@ -638,7 +638,7 @@ def make_train_dataset(args, tokenizer, accelerator):
     
     def preprocess_train(examples):
         
-        raw_images = [image.convert("RGB") for read_url(image) in examples['url']]
+        raw_images = [read_url(image).convert("RGB") for image in examples['url']]
         images = [image_transforms(image) for image in raw_images]
 
         # conditioning_images = [image.convert("RGB") for image in examples[conditioning_image_column]]
