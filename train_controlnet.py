@@ -596,7 +596,7 @@ def make_train_dataset(args, tokenizer, accelerator):
 
     def tokenize_captions(examples, is_train=True):
         captions = []
-        for caption in examples[caption_column]:
+        for caption in examples['text']:
             if random.random() < args.proportion_empty_prompts:
                 captions.append("")
             elif isinstance(caption, str):
