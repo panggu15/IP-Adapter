@@ -20,6 +20,7 @@ import os
 import random
 import shutil
 from pathlib import Path
+import pandas as pd
 
 import accelerate
 import numpy as np
@@ -30,7 +31,7 @@ import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import ProjectConfiguration, set_seed
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 from huggingface_hub import create_repo, upload_folder
 from packaging import version
 from PIL import Image
@@ -435,6 +436,11 @@ def parse_args(input_args=None):
         ),
     )
     parser.add_argument(
+        "--data_file",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
         "--dataset_name",
         type=str,
         default=None,
@@ -580,61 +586,13 @@ def parse_args(input_args=None):
 
 
 def make_train_dataset(args, tokenizer, accelerator):
-    # Get the datasets: you can either provide your own training and evaluation files (see below)
-    # or specify a Dataset from the hub (the dataset will be downloaded automatically from the datasets Hub).
 
-    # In distributed training, the load_dataset function guarantees that only one local process can concurrently
-    # download the dataset.
-    if args.dataset_name is not None:
-        # Downloading and loading a dataset from the hub.
-        dataset = load_dataset(
-            args.dataset_name,
-            args.dataset_config_name,
-            cache_dir=args.cache_dir,
-        )
-    else:
-        if args.train_data_dir is not None:
-            dataset = load_dataset(
-                args.train_data_dir,
-                cache_dir=args.cache_dir,
-            )
-        # See more about loading custom images at
-        # https://huggingface.co/docs/datasets/v2.0.0/en/dataset_script
-
-    # Preprocessing the datasets.
-    # We need to tokenize inputs and targets.
-    column_names = dataset["train"].column_names
-
-    # 6. Get the column names for input/target.
-    if args.image_column is None:
-        image_column = column_names[0]
-        logger.info(f"image column defaulting to {image_column}")
-    else:
-        image_column = args.image_column
-        if image_column not in column_names:
-            raise ValueError(
-                f"`--image_column` value '{args.image_column}' not found in dataset columns. Dataset columns are: {', '.join(column_names)}"
-            )
-
-    if args.caption_column is None:
-        caption_column = column_names[1]
-        logger.info(f"caption column defaulting to {caption_column}")
-    else:
-        caption_column = args.caption_column
-        if caption_column not in column_names:
-            raise ValueError(
-                f"`--caption_column` value '{args.caption_column}' not found in dataset columns. Dataset columns are: {', '.join(column_names)}"
-            )
-
-    if args.conditioning_image_column is None:
-        conditioning_image_column = column_names[2]
-        logger.info(f"conditioning image column defaulting to {conditioning_image_column}")
-    else:
-        conditioning_image_column = args.conditioning_image_column
-        if conditioning_image_column not in column_names:
-            raise ValueError(
-                f"`--conditioning_image_column` value '{args.conditioning_image_column}' not found in dataset columns. Dataset columns are: {', '.join(column_names)}"
-            )
+    df = pd.read_csv(args.data_file)
+    data_dict = {
+        'image_file': df['url'].tolist(),
+        'text': df['text'].tolist()
+    }
+    dataset = Dataset.from_dict(data_dict)
 
     def tokenize_captions(examples, is_train=True):
         captions = []
@@ -672,12 +630,19 @@ def make_train_dataset(args, tokenizer, accelerator):
         ]
     )
 
+    def read_url(url):
+        response = requests.get(url)
+        image_bytes = BytesIO(response.content)
+        raw_image = Image.open(image_bytes)
+        return raw_image
+    
     def preprocess_train(examples):
-        images = [image.convert("RGB") for image in examples[image_column]]
-        images = [image_transforms(image) for image in images]
+        
+        raw_images = [image.convert("RGB") for read_url(image) in examples['url']]
+        images = [image_transforms(image) for image in raw_images]
 
-        conditioning_images = [image.convert("RGB") for image in examples[conditioning_image_column]]
-        conditioning_images = [conditioning_image_transforms(image) for image in conditioning_images]
+        # conditioning_images = [image.convert("RGB") for image in examples[conditioning_image_column]]
+        conditioning_images = [conditioning_image_transforms(image) for image in raw_images]
 
         examples["pixel_values"] = images
         examples["conditioning_pixel_values"] = conditioning_images
