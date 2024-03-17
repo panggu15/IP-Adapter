@@ -21,6 +21,8 @@ import random
 import shutil
 from pathlib import Path
 import pandas as pd
+import requests
+from io import BytesIO
 
 import accelerate
 import numpy as np
