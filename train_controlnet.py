@@ -972,6 +972,7 @@ def main(args):
 
                 # Get the text embedding for conditioning
                 encoder_hidden_states = text_encoder(batch["input_ids"])[0]
+                print('encoder_hidden_states', encoder_hidden_states.shape)
 
                 controlnet_image = batch["conditioning_pixel_values"].to(dtype=weight_dtype)
 
